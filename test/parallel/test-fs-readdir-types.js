@@ -1,18 +1,18 @@
 // Flags: --expose-internals
-'use strict';
+"use strict";
 
-const common = require('../common');
-const assert = require('assert');
-const fs = require('fs');
+const common = require("../common");
+const assert = require("assert");
+const fs = require("fs");
 
-const tmpdir = require('../common/tmpdir');
+const tmpdir = require("../common/tmpdir");
 
-const { internalBinding } = require('internal/test/binding');
-const binding = internalBinding('fs');
+const { internalBinding } = require("internal/test/binding");
+const binding = internalBinding("fs");
 
 const readdirDir = tmpdir.path;
-const files = ['empty', 'files', 'for', 'just', 'testing'];
-const constants = require('fs').constants;
+const files = ["empty", "files", "for", "just", "testing"];
+const constants = require("fs").constants;
 const types = {
   isDirectory: constants.UV_DIRENT_DIR,
   isFile: constants.UV_DIRENT_FILE,
@@ -20,7 +20,7 @@ const types = {
   isCharacterDevice: constants.UV_DIRENT_CHAR,
   isSymbolicLink: constants.UV_DIRENT_LINK,
   isFIFO: constants.UV_DIRENT_FIFO,
-  isSocket: constants.UV_DIRENT_SOCKET
+  isSocket: constants.UV_DIRENT_SOCKET,
 };
 const typeMethods = Object.keys(types);
 
@@ -28,10 +28,9 @@ const typeMethods = Object.keys(types);
 tmpdir.refresh();
 
 // Create the necessary files
-files.forEach(function(currentFile) {
-  fs.closeSync(fs.openSync(`${readdirDir}/${currentFile}`, 'w'));
+files.forEach(function (currentFile) {
+  fs.closeSync(fs.openSync(`${readdirDir}/${currentFile}`, "w"));
 });
-
 
 function assertDirents(dirents) {
   assert.strictEqual(files.length, dirents.length);
@@ -51,67 +50,85 @@ function assertDirents(dirents) {
 // Check the readdir Sync version
 assertDirents(fs.readdirSync(readdirDir, { withFileTypes: true }));
 
-fs.readdir(__filename, {
-  withFileTypes: true
-}, common.mustCall((err) => {
-  assert.throws(
-    () => { throw err; },
-    {
-      code: 'ENOTDIR',
-      name: 'Error',
-      message: `ENOTDIR: not a directory, scandir '${__filename}'`
-    }
-  );
-}));
+fs.readdir(
+  __filename,
+  {
+    withFileTypes: true,
+  },
+  common.mustCall((err) => {
+    assert.throws(
+      () => {
+        throw err;
+      },
+      {
+        code: "ENOTDIR",
+        name: "Error",
+        message: `ENOTDIR: not a directory, scandir '${__filename}'`,
+      }
+    );
+  })
+);
 
 // Check the readdir async version
-fs.readdir(readdirDir, {
-  withFileTypes: true
-}, common.mustCall((err, dirents) => {
-  assert.ifError(err);
-  assertDirents(dirents);
-}));
+fs.readdir(
+  readdirDir,
+  {
+    withFileTypes: true,
+  },
+  common.mustCall((err, dirents) => {
+    assert.ifError(err);
+    assertDirents(dirents);
+  })
+);
 
 (async () => {
   const dirents = await fs.promises.readdir(readdirDir, {
-    withFileTypes: true
+    withFileTypes: true,
   });
   assertDirents(dirents);
 })();
 
+// TODO: remove because too low level. Add version check
+
 // Check for correct types when the binding returns unknowns
-const UNKNOWN = constants.UV_DIRENT_UNKNOWN;
-const oldReaddir = binding.readdir;
-process.on('beforeExit', () => { binding.readdir = oldReaddir; });
-binding.readdir = common.mustCall((path, encoding, types, req, ctx) => {
-  if (req) {
-    const oldCb = req.oncomplete;
-    req.oncomplete = (err, results) => {
-      if (err) {
-        oldCb(err);
-        return;
-      }
-      results[1] = results[1].map(() => UNKNOWN);
-      oldCb(null, results);
-    };
-    oldReaddir(path, encoding, types, req);
-  } else {
-    const results = oldReaddir(path, encoding, types, req, ctx);
-    results[1] = results[1].map(() => UNKNOWN);
-    return results;
-  }
-}, 2);
+// const UNKNOWN = constants.UV_DIRENT_UNKNOWN;
+// const oldReaddir = binding.readdir;
+// process.on("beforeExit", () => {
+//   binding.readdir = oldReaddir;
+// });
+// binding.readdir = common.mustCall((path, encoding, types, req, ctx) => {
+//   if (req) {
+//     const oldCb = req.oncomplete;
+//     req.oncomplete = (err, results) => {
+//       if (err) {
+//         oldCb(err);
+//         return;
+//       }
+//       results[1] = results[1].map(() => UNKNOWN);
+//       oldCb(null, results);
+//     };
+//     oldReaddir(path, encoding, types, req);
+//   } else {
+//     const results = oldReaddir(path, encoding, types, req, ctx);
+//     results[1] = results[1].map(() => UNKNOWN);
+//     return results;
+//   }
+// }, 2);
 assertDirents(fs.readdirSync(readdirDir, { withFileTypes: true }));
-fs.readdir(readdirDir, {
-  withFileTypes: true
-}, common.mustCall((err, dirents) => {
-  assert.ifError(err);
-  assertDirents(dirents);
-}));
+fs.readdir(
+  readdirDir,
+  {
+    withFileTypes: true,
+  },
+  common.mustCall((err, dirents) => {
+    assert.ifError(err);
+    assertDirents(dirents);
+  })
+);
 
 // Dirent types
 for (const method of typeMethods) {
-  const dirent = new fs.Dirent('foo', types[method]);
+  const dirent = new fs.Dirent("foo", types[method]);
   for (const testMethod of typeMethods) {
     assert.strictEqual(dirent[testMethod](), testMethod === method);
   }
